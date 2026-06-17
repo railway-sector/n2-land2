@@ -6,7 +6,6 @@ import am5themes_Animated from "@amcharts/amcharts5/themes/Animated";
 import am5themes_Responsive from "@amcharts/amcharts5/themes/Responsive";
 import {
   thousands_separators,
-  zoomToLayer,
   queryDefinitionExpression,
   updatedDisplayDates,
 } from "../Query";
@@ -104,8 +103,6 @@ const NloChart = memo(() => {
         statisticField: nloStatusField,
         statisticType: "count",
       });
-
-      zoomToLayer(nloLayer, arcgisScene);
 
       return {
         chartData: chartData[0] || [],

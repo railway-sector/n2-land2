@@ -314,6 +314,7 @@ const pnrRenderer = new UniqueValueRenderer({
   uniqueValueInfos: [
     {
       value: 1, // RP
+      label: "RP",
       symbol: new SimpleFillSymbol({
         color: [137, 205, 102],
         style: "diagonal-cross",
@@ -325,6 +326,7 @@ const pnrRenderer = new UniqueValueRenderer({
     },
     {
       value: 2, // PNR
+      label: "PNR",
       symbol: new SimpleFillSymbol({
         color: [137, 205, 102],
         style: "diagonal-cross",
@@ -336,6 +338,7 @@ const pnrRenderer = new UniqueValueRenderer({
     },
     {
       value: 3, // BCDA
+      label: "BCDA",
       symbol: new SimpleFillSymbol({
         color: [137, 205, 102],
         style: "diagonal-cross",
