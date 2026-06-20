@@ -94,7 +94,7 @@ const StructureChart = memo(() => {
       });
 
       //--- percent demolished
-      const perce_demolished = Math.round((demolished_n / tobe_demolish) * 100);
+      const perce_demolished = Math.round((demolished / tobe_demolish) * 100);
 
       return {
         chartData: chartData[0] || [],
