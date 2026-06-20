@@ -14,12 +14,10 @@ interface pieChartStatusDataType {
   statusColor?: any;
   statusField?: any;
   statisticField?: any;
-  idField?: any;
   valueSumField?: any;
   queryField?: any;
   statisticType?: statisticsType;
 }
-
 export async function pieChartStatusData({
   qChart,
   layer,
@@ -46,6 +44,7 @@ export async function pieChartStatusData({
 
   //--- Query features using statistics definitions
   let total_count = 0;
+
   const response = await layer?.queryFeatures(query);
   const data = response.features.map((result: any) => {
     const attributes = result.attributes;
@@ -57,26 +56,23 @@ export async function pieChartStatusData({
     const isStringOrNumber = typeof statusName === "number";
 
     return Object.assign({
-      category: isStringOrNumber
-        ? statusList.find((item: any) => item.value === statusName).category
-        : statusName,
+      category: isStringOrNumber ? statusList[statusName - 1] : statusName,
       value: attributes.statsCollect,
     });
   });
 
   //--- Account for zero count
   const data0 = statusList.map((status: any, index: any) => {
-    const find = data.find((emp: any) => emp.category === status.category);
+    const find = data.find((emp: any) => emp.category === status);
     const value = find === undefined ? 0 : find?.value;
     return Object.assign({
-      category: status.category,
+      category: status,
       value: value,
       sliceSettings: {
         fill: am5.color(statusColor[index]),
       },
     });
   });
-
   return [data0, total_count];
 }
 

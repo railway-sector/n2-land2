@@ -1,5 +1,4 @@
 import "@arcgis/map-components/components/arcgis-time-slider";
-import { updateLotSymbology } from "../Query";
 import * as reactiveUtils from "@arcgis/core/core/reactiveUtils";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -7,18 +6,17 @@ import {
   dateDisplayKeys,
   timesliderKeys,
   datefieldKeys,
-  latestDateKeys,
 } from "../interfaceKeys";
 import type {
   TimesliderFieldsTypes,
   DisplayDates,
   TimeSliderState,
   DateFieldsType,
-  LatestDateType,
 } from "../interfaceKeys";
+import { updateLotSymbology } from "../timesliderQuery";
 
 export default function Timeslider() {
-  const arcgisScene = document.querySelector("arcgis-scene");
+  const arcgisMap = document.querySelector("arcgis-map");
   const queryClient = useQueryClient();
 
   //--- Update timeslider state
@@ -39,16 +37,9 @@ export default function Timeslider() {
     queryFn: async () => ({}),
     staleTime: Infinity,
   });
+  const latestasofdate = dateField?.latestasofdate;
 
-  //--- Read latest date
-  const { data: latestDate } = useQuery<LatestDateType | any>({
-    queryKey: latestDateKeys.selected,
-    queryFn: async () => ({}),
-    staleTime: Infinity,
-  });
-  const latestasofdate = latestDate?.latestasofdate;
-
-  arcgisScene?.viewOnReady(() => {
+  arcgisMap?.viewOnReady(() => {
     const timeSlider: any = document.querySelector("arcgis-time-slider");
 
     const dateCollect: any = [];
@@ -107,18 +98,17 @@ export default function Timeslider() {
                   ? yyyymm0d
                   : yyyymmdd;
 
+          const new_status_field = `${new_date_field}_NVS`;
           queryClient.setQueryData<TimesliderFieldsTypes>(
             timesliderFieldKeys.selected,
             {
-              dateforhandedover: `${year}-${month}-${day}`,
-              statusdateField: new_date_field,
-              newHandedoverAreafield: `${new_date_field}_HOA`,
-              newAffectedAreafield: `${new_date_field}_TAA`,
-              newHandedOverfield: `${new_date_field}_HO`,
+              statusdateField: new_status_field,
+              newHandedOverJVfield: `${new_date_field}_JV`,
+              newHandedoverNYfield: `${new_date_field}_NY`,
             },
           );
 
-          updateLotSymbology(new_date_field);
+          updateLotSymbology(new_status_field);
         }
       },
     );

@@ -7,70 +7,60 @@ import "@arcgis/map-components/components/arcgis-zoom";
 import "@esri/calcite-components/components/calcite-shell";
 import "@esri/calcite-components/components/calcite-navigation";
 import "@esri/calcite-components/components/calcite-navigation-logo";
-import type { ArcgisScene } from "@arcgis/map-components/components/arcgis-scene";
+import type { ArcgisMap } from "@arcgis/map-components/components/arcgis-map";
 import {
-  structureLayer,
-  pierAccessLayer,
-  stationLayer,
-  alignmentGroupLayer,
-  nloLoOccupancyGroupLayer,
+  accessRoadOptionsGroupLayer,
+  alignmentLine,
+  boundaryGroupLayer,
+  depotBuildingsGroupLayer,
+  evsBoundaryPoGroupLayer,
+  isfLayer,
   lotGroupLayer,
-  ngcp2_groupLayer,
   lotLayer,
-  lotLayerRenderer,
-  meralco_tss10_groupLayer,
+  // lotLayerStatusRenderer,
+  stationLayer,
+  structureLayer,
+  structuresGroupLayer,
 } from "../layers";
 import type { ArcgisSearch } from "@arcgis/map-components/components/arcgis-search";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   timesliderFieldKeys,
   datefieldKeys,
-  latestDateKeys,
+  dateDisplayKeys,
 } from "../interfaceKeys";
-import { fetchDateInfo, getSortDates } from "../Query";
-import { updatedDateCategoryNames } from "../uniqueValues";
+import { dateUpdate } from "../Query";
 import type {
   TimesliderFieldsTypes,
   DateFieldsType,
-  LatestDateType,
+  DisplayDates,
 } from "../interfaceKeys";
+import { getSortDates } from "../timesliderQuery";
 
 export default function MapDisplay() {
   const queryClient = useQueryClient();
-  const arcgisScene = document.querySelector("arcgis-scene") as ArcgisScene;
+  const arcgisMap = document.querySelector("arcgis-map") as ArcgisMap;
   const arcgisSearch = document.querySelector("arcgis-search") as ArcgisSearch;
 
-  //--- Latest date
-  const { data: latestDate } = useQuery<LatestDateType | any>({
-    queryKey: [latestDateKeys.selected, updatedDateCategoryNames[0]],
-    queryFn: () => fetchDateInfo(updatedDateCategoryNames[0]),
+  //--- As of Date and days Passed
+  const { data: newAsOfDate } = useQuery<DisplayDates | any>({
+    queryKey: [dateDisplayKeys.selected],
+    queryFn: () => dateUpdate(),
     select: (response) => {
       return {
-        latestasofdate: response[0][2],
+        asOfDate: response[0][0],
+        daysPass: response[0][1],
       };
     },
     staleTime: Infinity,
   });
-  queryClient.setQueryData<LatestDateType>(latestDateKeys.selected, latestDate);
+  queryClient.setQueryData<DisplayDates>(dateDisplayKeys.selected, newAsOfDate);
 
   //--- Prepare initial date array
   const { data: dateList } = useQuery<TimesliderFieldsTypes | any>({
     queryKey: [timesliderFieldKeys.selected, lotLayer], // lotLayer is a dependency
     queryFn: async () => {
-      const date_fields: any = await getSortDates(lotLayer);
-      const latest_date = date_fields[date_fields.length - 1];
-
-      // Default lot layer renderer
-      lotLayerRenderer.field = latest_date;
-      lotLayer.renderer = lotLayerRenderer;
-
-      return {
-        dateFields: date_fields,
-        statusdateField: latest_date,
-        newHandedoverAreafield: `${latest_date}_HOA`,
-        newAffectedAreafield: `${latest_date}_TAA`,
-        newHandedOverfield: `${latest_date}_HO`,
-      };
+      return {};
     },
     staleTime: Infinity,
   });
@@ -83,24 +73,30 @@ export default function MapDisplay() {
   const { data: dateField } = useQuery<DateFieldsType | any>({
     queryKey: [datefieldKeys.selected, lotLayer], // lotLayer is a dependency
     queryFn: async () => {
+      const response = await dateUpdate();
       return {
         dateFields: await getSortDates(lotLayer),
+        latestasofdate: response[0][2],
       };
     },
     staleTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
   queryClient.setQueryData<DateFieldsType>(datefieldKeys.selected, dateField);
 
   //--- Add layers to scene view
-  arcgisScene?.viewOnReady(() => {
-    arcgisScene?.map?.add(pierAccessLayer);
-    arcgisScene?.map?.add(lotGroupLayer);
-    arcgisScene?.map?.add(ngcp2_groupLayer);
-    arcgisScene?.map?.add(structureLayer);
-    arcgisScene?.map?.add(nloLoOccupancyGroupLayer);
-    arcgisScene?.map?.add(meralco_tss10_groupLayer);
-    arcgisScene?.map?.add(alignmentGroupLayer);
-    arcgisScene?.map?.add(stationLayer);
+  arcgisMap?.viewOnReady(() => {
+    arcgisMap?.map?.add(lotGroupLayer);
+    arcgisMap?.map?.add(depotBuildingsGroupLayer);
+    arcgisMap?.map?.add(evsBoundaryPoGroupLayer);
+    arcgisMap?.map?.add(structuresGroupLayer);
+    arcgisMap?.map?.add(isfLayer);
+    arcgisMap?.map?.add(boundaryGroupLayer);
+    arcgisMap?.map?.add(stationLayer);
+    arcgisMap?.map?.add(alignmentLine);
+    arcgisMap?.map?.add(accessRoadOptionsGroupLayer);
 
     // Search components
     const sources: any = [
@@ -120,47 +116,36 @@ export default function MapDisplay() {
         exactMatch: false,
         outFields: ["StrucID"],
         name: "Structure ID",
-        placeholder: "example: NSRP-01-02-ML007",
-      },
-      {
-        layer: pierAccessLayer,
-        searchFields: ["PierNumber"],
-        displayField: "PierNumber",
-        exactMatch: false,
-        outFields: ["PierNumber"],
-        name: "Pier No",
-        zoomScale: 1000,
-        placeholder: "example: P-288",
+        placeholder: "example: MCRP-01-01-ML028",
       },
     ];
 
     arcgisSearch.allPlaceholder = "LotID, StructureID, Chainage";
     arcgisSearch.includeDefaultSourcesDisabled = true;
     arcgisSearch.locationDisabled = true;
+    arcgisMap.hideAttribution = true;
     arcgisSearch?.sources.push(...sources);
-    arcgisScene.hideAttribution = true;
-    arcgisScene.view.environment.atmosphereEnabled = false;
-    arcgisScene.view.environment.starsEnabled = false;
-    if (arcgisScene?.map?.ground) {
-      arcgisScene.map.ground.navigationConstraint = { type: "none" };
-    }
   });
 
   return (
     <>
-      <arcgis-scene
+      <arcgis-map
+        id="test-map"
         basemap="dark-gray-vector"
         ground="world-elevation"
-        viewingMode="local"
-        center="120.5793, 15.18"
+        center="121.0194387, 14.6972616"
         zoom={10}
+        // onarcgisViewReadyChange={(event: any) => {
+        //   setMapView(event.target);
+        // }}
       >
         <arcgis-compass slot="top-right"></arcgis-compass>
         <arcgis-expand close-on-esc slot="top-right" mode="floating">
           <arcgis-search></arcgis-search>
         </arcgis-expand>
         <arcgis-zoom slot="bottom-right"></arcgis-zoom>
-      </arcgis-scene>
+        <arcgis-locate slot="top-right"></arcgis-locate>
+      </arcgis-map>
     </>
   );
 }

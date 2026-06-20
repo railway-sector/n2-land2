@@ -10,45 +10,65 @@ import type { SelectedLocation } from "../interfaceKeys";
 export default function DropdownData() {
   const queryClient = useQueryClient();
 
-  const [barangayList, setBarangayList] = useState<any>();
-  const [municipalSelected, setMunicipalSelected] = useState<any>();
-  const [barangaySelected, setBarangaySelected] = useState<any>({ name: "" });
+  const [cPackageSelected, setCPackageSelected] = useState<null | any>(null);
+  const [landTypeSelected, setLandTypeSelected] = useState<null | any>(null);
+  const [landSection, setLandSection] = useState<null | any>(null);
 
-  const { data: municipalList } = useQuery<any>({
+  const [landTypeList, setLandTypeList] = useState<any>([]);
+  const [landSectionList, setLandSectionList] = useState<any>([]);
+
+  const { data: cpackageList } = useQuery<any>({
     queryKey: ["dropdownData"], // Do not add lotLayer as a dependency. The dropdown list will not be updated properly.
     queryFn: async () => {
       const dropdownData = new GenerateDropdownData(
         [lotLayer],
-        ["Municipality", "Barangay"],
+        ["Package", "Type", "Station1"],
       );
       return await dropdownData.dropDownQuery();
     },
+    staleTime: Infinity, // never refetch in the backround. If not Inifity, it will refetch.
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   // this instantly updates the global cache
-  function updateMunicipalBarangay(
-    mobj_field: SelectedLocation["municipality"],
-    bobj_field: SelectedLocation["barangay"],
+  function updateDropdownListValues(
+    cp_obj_field: SelectedLocation["cpackage"],
+    type_obj_field: SelectedLocation["landType"],
+    section_obj_field: SelectedLocation["landSection"],
   ) {
     return queryClient.setQueryData<SelectedLocation>(locationKeys.selected, {
-      municipality: mobj_field,
-      barangay: bobj_field,
+      cpackage: cp_obj_field,
+      landType: type_obj_field,
+      landSection: section_obj_field,
     });
   }
 
   // handle change event of the Municipality dropdown
-  const handleMunicipalityChange = (obj: any) => {
-    updateMunicipalBarangay(obj.field1, undefined);
-
-    setMunicipalSelected(obj);
-    setBarangayList(obj.field2);
-    setBarangaySelected({ name: "" });
+  const handleContractPackageChange = (obj: any) => {
+    updateDropdownListValues(obj.field1, undefined, undefined);
+    setCPackageSelected(obj);
+    setLandTypeList(obj.field2);
+    setLandTypeSelected(null);
+    setLandSection(null);
   };
 
   // handle change event of the barangay dropdownff
-  const handleBarangayChange = (obj: any) => {
-    updateMunicipalBarangay(municipalSelected?.field1, obj.name);
-    setBarangaySelected(obj);
+  const handleLandTypeChange = (obj: any) => {
+    updateDropdownListValues(cPackageSelected?.field1, obj.name, undefined);
+    setLandTypeSelected(obj);
+    setLandSectionList(obj.field3);
+    setLandSection(null);
+  };
+
+  const handleLandSectionChange = (obj: any) => {
+    updateDropdownListValues(
+      cPackageSelected?.field1,
+      landTypeSelected?.name,
+      obj.name,
+    );
+    setLandSection(obj);
   };
 
   // Style CSS
@@ -79,42 +99,42 @@ export default function DropdownData() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "row", margin: "auto" }}>
-      <div
-        style={{
-          color: "white",
-          fontSize: "0.85rem",
-          margin: "auto",
-          paddingRight: "0.5rem",
-        }}
-      >
-        Municipality
-      </div>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "row",
+        margin: "auto",
+        padding: "5px",
+        borderRadius: "5px",
+        zIndex: 999,
+      }}
+    >
       <Select
-        placeholder="Select Municipality"
-        value={municipalSelected}
-        options={municipalList && municipalList}
-        onChange={handleMunicipalityChange}
+        placeholder="Select CP"
+        value={cPackageSelected}
+        options={cpackageList && cpackageList}
+        onChange={handleContractPackageChange}
         getOptionLabel={(x: any) => x.field1}
         styles={customstyles}
       />
       <br />
-      <div
-        style={{
-          color: "white",
-          fontSize: "0.85rem",
-          margin: "auto",
-          paddingRight: "0.5rem",
-          marginLeft: "10px",
-        }}
-      >
-        Barangay
-      </div>
+
+      <div style={{ marginRight: "5px", marginLeft: "5px" }}></div>
       <Select
-        placeholder="Select Barangay"
-        value={barangaySelected}
-        options={barangayList}
-        onChange={handleBarangayChange}
+        placeholder="Select Land Type"
+        value={landTypeSelected}
+        options={landTypeList && landTypeList}
+        onChange={handleLandTypeChange}
+        getOptionLabel={(x: any) => x.name}
+        styles={customstyles}
+      />
+      <br />
+      <div style={{ marginRight: "5px", marginLeft: "5px" }}></div>
+      <Select
+        placeholder="Select Station/Area"
+        value={landSection}
+        options={landSectionList && landSectionList}
+        onChange={handleLandSectionChange}
         getOptionLabel={(x: any) => x.name}
         styles={customstyles}
       />

@@ -15,7 +15,7 @@ export function App(): React.JSX.Element {
   const [loggedInState, setLoggedInState] = useState<boolean>(false);
   useEffect(() => {
     const info = new OAuthInfo({
-      appId: "48xyFWCr20nwRSXv",
+      appId: "GYpYnxk4m4HlEI34",
       popup: false,
       portalUrl: "https://gis.railway-sector.com/portal",
     });

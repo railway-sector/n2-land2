@@ -2,7 +2,6 @@ import * as am5 from "@amcharts/amcharts5";
 import FeatureFilter from "@arcgis/core/layers/support/FeatureFilter";
 import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
 import Query from "@arcgis/core/rest/support/Query";
-import { thousands_separators } from "./Query";
 
 // Dynamic chart size
 export function responsiveChart(
@@ -40,98 +39,8 @@ export function responsiveChart(
   });
 }
 
-function affected_area_label(affectAreaPie: any, category: any) {
-  return (
-    "{value}[/]" +
-    " (" +
-    thousands_separators(
-      affectAreaPie.find((emp: any) => emp.category === category)?.value,
-    ) +
-    " m2" +
-    ")"
-  );
-}
-
-export function affectedAreaValue(
-  legend: any,
-  affectAreaPie: any,
-  statusLotLabel: any,
-) {
-  legend.valueLabels.template.adapters.add("text", (text: any, target: any) => {
-    const category = target.dataItem?.dataContext?.category;
-    // if (target.dataItem && target.dataItem.get('valuePercentTotal') < 5) {
-    //   return category === 'Paid'
-    //     ? // eslint-disable-next-line no-useless-concat
-    //       "{valuePercentTotal.formatNumber('#.')}% ({value})" + ' (' + testValue + ' sqm)'
-    //     : "{valuePercentTotal.formatNumber('#.')}% ({value})";
-    // }
-    // "[#C9CC3F; fontSize: 12px;][bold]{valuePercentTotal.formatNumber('#.')}% ({value})[/]"
-    if (target.dataItem) {
-      return category === statusLotLabel[0]
-        ? affected_area_label(affectAreaPie, category)
-        : category === statusLotLabel[1]
-          ? affected_area_label(affectAreaPie, category)
-          : category === statusLotLabel[2]
-            ? affected_area_label(affectAreaPie, category)
-            : category === statusLotLabel[3]
-              ? affected_area_label(affectAreaPie, category)
-              : category === statusLotLabel[4]
-                ? affected_area_label(affectAreaPie, category)
-                : category === statusLotLabel[5]
-                  ? affected_area_label(affectAreaPie, category)
-                  : category === statusLotLabel[6]
-                    ? affected_area_label(affectAreaPie, category)
-                    : category === statusLotLabel[7]
-                      ? affected_area_label(affectAreaPie, category)
-                      : "{value}";
-    }
-
-    return text;
-  });
-}
-
-type layerViewQueryProps = {
-  layer?: any;
-  qExpression?: any;
-  view: any;
-  qChart?: any;
-};
-
-export const highlightFilterLayerView = async ({
-  layer,
-  // qExpression,
-  view,
-  qChart,
-}: layerViewQueryProps) => {
-  const query = layer.createQuery();
-  query.where = qChart.queryExpression();
-  let highlightSelect: any;
-
-  const layerView = await view?.whenLayerView(layer);
-  const results = await layer?.queryObjectIds(query);
-
-  const queryExt = new Query({ objectIds: results });
-  const qExtResult = await layer?.queryExtent(queryExt);
-  if (qExtResult?.extent) {
-    view?.goTo(qExtResult.extent);
-  }
-
-  highlightSelect && highlightSelect.remove();
-  highlightSelect = layerView.highlight(results);
-
-  layerView.filter = new FeatureFilter({ where: qChart.queryExpression() });
-  view?.on("click", () => {
-    layerView.filter = new FeatureFilter({
-      where: undefined,
-    });
-    //-- Reset q/q2Expression; else, statusLA is not cleared.
-    qChart.qExpression = undefined;
-    qChart.q2Expression = undefined;
-    highlightSelect && highlightSelect.remove();
-  });
-};
-
 interface chartType {
+  chartItem?: any;
   chart: any;
   pieSeries: any;
   legend: any;
@@ -143,9 +52,8 @@ interface chartType {
   q2Field?: any;
   q3Value?: any;
   q3Field?: any;
-  q2Expression?: any;
   status_field: any;
-  arcgisScene: any;
+  arcgisMap: any;
   updateChartPanelwidth: any;
   data: any;
   pieSeriesScale: any;
@@ -154,16 +62,17 @@ interface chartType {
   pieInnerValueFontSize?: any;
   layer: FeatureLayer;
   statusArray: any;
+  background_color_switch?: boolean;
 }
 export function chartRenderer({
+  chartItem,
   chart,
   pieSeries,
   legend,
   root,
   qChart,
-  q2Expression,
   status_field,
-  arcgisScene,
+  arcgisMap,
   updateChartPanelwidth,
   data,
   pieSeriesScale,
@@ -172,11 +81,15 @@ export function chartRenderer({
   pieInnerValueFontSize,
   layer,
   statusArray,
+  background_color_switch,
 }: chartType) {
   // values inside a donut
   let inner_label = pieSeries.children.push(
     am5.Label.new(root, {
-      text: `[#ffffff]{valueSum}[/]\n[fontSize: ${pieInnerLabelFontSize}; #d3d3d3; verticalAlign: super]${pieInnerLabel}[/]`,
+      text:
+        background_color_switch === false
+          ? `[#ffffff]{valueSum}[/]\n[fontSize: ${pieInnerLabelFontSize}; #d3d3d3; verticalAlign: super]${pieInnerLabel}[/]`
+          : `[#000000]{valueSum}[/]\n[fontSize: 0.5em; #000000; verticalAlign: super]${pieInnerLabel}[/]`,
       // text: "[#ffffff]{valueSum}[/]\n[fontSize: 0.45em; #d3d3d3; verticalAlign: super]PRIVATE LOTS[/]",
       fontSize: `${pieInnerValueFontSize}`,
       centerX: am5.percent(50),
@@ -194,7 +107,7 @@ export function chartRenderer({
   // Set slice opacity and stroke color
   pieSeries.slices.template.setAll({
     toggleKey: "none",
-    fillOpacity: 0.9,
+    fillOpacity: chartItem === "structure" ? 0 : 0.9,
     stroke: am5.color("#ffffff"),
     strokeWidth: 0.5,
     strokeOpacity: 1,
@@ -219,12 +132,11 @@ export function chartRenderer({
       : `${status_field} = '${statusSelected}'`;
 
     qChart.qExpression = queryField;
-    qChart.q2Expression = q2Expression;
 
     highlightFilterLayerView({
       layer: layer,
-      // qExpression: qChart.queryExpression(),
-      view: arcgisScene?.view,
+      qExpression: qChart.queryExpression(),
+      view: arcgisMap?.view,
       qChart: qChart,
     });
   });
@@ -267,12 +179,20 @@ export function chartRenderer({
   // To have responsive font size, do not set font size
   legend.labels.template.setAll({
     oversizedBehavior: "truncate",
-    fill: am5.color("#ffffff"),
+    fill:
+      background_color_switch === false
+        ? am5.color("#ffffff")
+        : am5.color("#000000"),
+    fontSize: "14px",
   });
 
   legend.valueLabels.template.setAll({
     textAlign: "right",
-    fill: am5.color("#ffffff"),
+    fill:
+      background_color_switch === false
+        ? am5.color("#ffffff")
+        : am5.color("#000000"),
+    fontSize: "14px",
   });
 
   legend.itemContainers.template.setAll({
@@ -282,3 +202,43 @@ export function chartRenderer({
 
   pieSeries.appear(1000, 100);
 }
+
+type layerViewQueryProps = {
+  layer?: any;
+  qExpression?: any;
+  view: any;
+  qChart?: any;
+};
+
+export const highlightFilterLayerView = async ({
+  layer,
+  qExpression,
+  view,
+  qChart,
+}: layerViewQueryProps) => {
+  const query = layer.createQuery();
+  query.where = qChart.queryExpression();
+  let highlightSelect: any;
+
+  const layerView = await view?.whenLayerView(layer);
+  const results = await layer?.queryObjectIds(query);
+
+  const queryExt = new Query({ objectIds: results });
+  const qExtResult = await layer?.queryExtent(queryExt);
+  if (qExtResult?.extent) {
+    view?.goTo(qExtResult.extent);
+  }
+
+  highlightSelect && highlightSelect.remove();
+  highlightSelect = layerView.highlight(results);
+
+  layerView.filter = new FeatureFilter({ where: qExpression });
+  view?.on("click", () => {
+    layerView.filter = new FeatureFilter({
+      where: undefined,
+    });
+    qChart.qExpression = undefined;
+    qChart.q2Expression = undefined;
+    highlightSelect && highlightSelect.remove();
+  });
+};

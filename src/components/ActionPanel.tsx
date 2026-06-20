@@ -7,40 +7,26 @@ import { useState } from "react";
 import "@arcgis/map-components/components/arcgis-basemap-gallery";
 import "@arcgis/map-components/components/arcgis-layer-list";
 import "@arcgis/map-components/components/arcgis-legend";
-import "@arcgis/map-components/components/arcgis-direct-line-measurement-3d";
-import "@arcgis/map-components/components/arcgis-area-measurement-3d";
-import { defineActions } from "../uniqueValues";
-import {
-  ngcp_tagged_structureLayer,
-  ngcp_working_area,
-  prowOthersLayer,
-} from "../layers";
-import HandedOverAreaChart from "./HandedOverAreaChart";
-import { updateLotSymbology } from "../Query";
+import "@arcgis/map-components/components/arcgis-time-slider";
+import { defineActions, lotStatusField } from "../uniqueValues";
 import Timeslider from "./Timeslider";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   datefieldKeys,
   dateDisplayKeys,
   timesliderKeys,
-  latestDateKeys,
 } from "../interfaceKeys";
 import type {
   DateFieldsType,
   DisplayDates,
   TimeSliderState,
-  LatestDateType,
 } from "../interfaceKeys";
+import { updateLotSymbology } from "../timesliderQuery";
 
 function ActionPanel() {
   const queryClient = useQueryClient();
   const [activeWidget, setActiveWidget] = useState(null);
   const [nextWidget, setNextWidget] = useState(null);
-  const arcgisScene = document.querySelector("arcgis-scene");
-  const directLineMeasure = document.querySelector(
-    "arcgis-direct-line-measurement-3d",
-  );
-  const areaMeasure = document.querySelector("arcgis-area-measurement-3d");
   const timeSlider = document.querySelector("arcgis-time-slider");
   const shellPanel: any = document.getElementById("left-shell-panel");
 
@@ -50,17 +36,9 @@ function ActionPanel() {
     queryFn: async () => ({}),
     staleTime: Infinity,
   });
-  const date_fields = datefields?.dateFields;
+  const latestasofdate = datefields?.latestasofdate;
 
-  //--- Read latest date
-  const { data: latestDate } = useQuery<LatestDateType | any>({
-    queryKey: latestDateKeys.selected,
-    queryFn: async () => ({}),
-    staleTime: Infinity,
-  });
-  const latestasofdate = latestDate?.latestasofdate;
-
-  //--- Manage action panel
+  // End of dropdown list
   if (activeWidget) {
     const actionActiveWidget: any = document.querySelector(
       `[data-panel-id=${activeWidget}]`,
@@ -68,11 +46,6 @@ function ActionPanel() {
     actionActiveWidget.hidden = true;
     shellPanel.collapsed = true;
 
-    //-- Reset line and area measurement
-    directLineMeasure && directLineMeasure.clear();
-    areaMeasure && areaMeasure.clear();
-
-    //--- Reset timeslider to default state
     if (timeSlider) {
       timeSlider.timeExtent = null;
       shellPanel.collapsed = true;
@@ -93,7 +66,7 @@ function ActionPanel() {
         timesliderstate: false,
       });
 
-      updateLotSymbology(date_fields[date_fields.length - 1]);
+      updateLotSymbology(lotStatusField);
     }
   }
 
@@ -106,7 +79,7 @@ function ActionPanel() {
 
     // Timeslider and handedOver charts do not appear in shell-panel so
     // need to collapse shell-panel manually
-    if (nextWidget === "timeslider" || nextWidget === "handedover-charts") {
+    if (nextWidget === "timeslider") {
       shellPanel.collapsed = true;
 
       //--- Update timeslider state
@@ -129,9 +102,9 @@ function ActionPanel() {
           slot="action-bar"
           style={{
             borderStyle: "solid",
-            borderRightWidth: 3.5,
-            borderLeftWidth: 5,
-            borderBottomWidth: 5,
+            borderRightWidth: 4.5,
+            borderLeftWidth: 4.5,
+            borderBottomWidth: 4.5,
             borderColor: "#555555",
           }}
         >
@@ -140,7 +113,6 @@ function ActionPanel() {
             icon="layers"
             text="layers"
             id="layers"
-            //textEnabled={true}
             onClick={(event: any) => {
               setNextWidget(event.target.id);
               setActiveWidget(nextWidget === activeWidget ? null : nextWidget);
@@ -159,39 +131,6 @@ function ActionPanel() {
           ></calcite-action>
 
           <calcite-action
-            data-action-id="handedover-charts"
-            icon="graph-bar-side-by-side"
-            text="Handed-Over Area"
-            id="handedover-charts"
-            onClick={(event: any) => {
-              setNextWidget(event.target.id);
-              setActiveWidget(nextWidget === activeWidget ? null : nextWidget);
-            }}
-          ></calcite-action>
-
-          <calcite-action
-            data-action-id="directline-measure"
-            icon="measure-line"
-            text="Line Measurement"
-            id="directline-measure"
-            onClick={(event: any) => {
-              setNextWidget(event.target.id);
-              setActiveWidget(nextWidget === activeWidget ? null : nextWidget);
-            }}
-          ></calcite-action>
-
-          <calcite-action
-            data-action-id="area-measure"
-            icon="measure-area"
-            text="Area Measurement"
-            id="area-measure"
-            onClick={(event: any) => {
-              setNextWidget(event.target.id);
-              setActiveWidget(nextWidget === activeWidget ? null : nextWidget);
-            }}
-          ></calcite-action>
-
-          <calcite-action
             data-action-id="timeslider"
             icon="sliders-horizontal"
             text="Land Status Change"
@@ -201,6 +140,17 @@ function ActionPanel() {
               setActiveWidget(nextWidget === activeWidget ? null : nextWidget);
             }}
           ></calcite-action>
+
+          {/*<CalciteAction
+            data-action-id="charts"
+            icon="graph-time-series"
+            text="Progress Chart"
+            id="charts"
+            onClick={(event) => {
+              setNextWidget(event.target.id);
+              setActiveWidget(nextWidget === activeWidget ? null : nextWidget);
+            }}
+          ></CalciteAction>*/}
 
           <calcite-action
             data-action-id="information"
@@ -216,91 +166,28 @@ function ActionPanel() {
 
         <calcite-panel heading="Layers" data-panel-id="layers" hidden>
           <arcgis-layer-list
-            referenceElement="arcgis-scene"
+            referenceElement="arcgis-map"
             selectionMode="multiple"
             visibilityAppearance="checkbox"
             // show-collapse-button
             show-filter
             filter-placeholder="Filter layers"
             listItemCreatedFunction={defineActions}
-            onarcgisTriggerAction={(event: any) => {
-              const { id } = event.detail.action;
-              if (id === "full-extent-ngcpwa") {
-                if (ngcp_working_area.fullExtent) {
-                  arcgisScene
-                    ?.goTo(ngcp_working_area.fullExtent)
-                    .catch((error: any) => {
-                      if (error.name !== "AbortError") {
-                        console.error(error);
-                      }
-                    });
-                }
-              } else if (id === "full-extent-ngcptagged") {
-                if (ngcp_tagged_structureLayer.fullExtent) {
-                  arcgisScene
-                    ?.goTo(ngcp_tagged_structureLayer.fullExtent)
-                    .catch((error) => {
-                      if (error.name !== "AbortError") {
-                        console.error(error);
-                      }
-                    });
-                }
-              } else if (id === "full-extent-sapangbalenriver") {
-                if (prowOthersLayer.fullExtent) {
-                  arcgisScene
-                    ?.goTo(prowOthersLayer.fullExtent)
-                    .catch((error) => {
-                      if (error.name !== "AbortError") {
-                        console.error(error);
-                      }
-                    });
-                }
-              }
-            }}
           ></arcgis-layer-list>
         </calcite-panel>
 
         <calcite-panel heading="Basemaps" data-panel-id="basemaps" hidden>
-          <arcgis-basemap-gallery referenceElement="arcgis-scene"></arcgis-basemap-gallery>
-        </calcite-panel>
-
-        <calcite-panel
-          height="l"
-          data-panel-id="handedover-charts"
-          hidden
-        ></calcite-panel>
-
-        <calcite-panel
-          heading="Direct Line Measure"
-          data-panel-id="directline-measure"
-          hidden
-        >
-          <arcgis-direct-line-measurement-3d
-            id="directLineMeasurementAnalysisButton"
-            referenceElement="arcgis-scene"
-            style={{
-              marginLeft: "auto",
-              marginRight: "auto",
-            }}
-          ></arcgis-direct-line-measurement-3d>
-        </calcite-panel>
-
-        <calcite-panel
-          heading="Area Measure"
-          data-panel-id="area-measure"
-          hidden
-        >
-          <arcgis-area-measurement-3d
-            id="AreaMeasurementAnalysisButton"
-            referenceElement="arcgis-scene"
-            style={{
-              marginLeft: "auto",
-              marginRight: "auto",
-            }}
-          ></arcgis-area-measurement-3d>
+          <arcgis-basemap-gallery referenceElement="arcgis-map"></arcgis-basemap-gallery>
         </calcite-panel>
 
         <calcite-panel data-panel-id="timeslider" hidden></calcite-panel>
+
+        {/* <CalcitePanel
+          class="timeSeries-panel"
+          height-scale="l"
+          data-panel-id="charts"
+          hidden
+        ></CalcitePanel> */}
 
         <calcite-panel heading="Description" data-panel-id="information" hidden>
           {nextWidget === "information" ? (
@@ -309,29 +196,26 @@ function ActionPanel() {
               <ul>
                 <li>Land Aquisition, </li>
                 <li>Structures, </li>
-                <li>Housedholds (NLOs), </li>
+                <li>ISF (Informal Settlers Families), </li>
                 <li>Lots under Expropriation, </li>
               </ul>
               <div style={{ paddingLeft: "20px" }}>
                 <li>
                   The source of data: <b>Master List tables</b> provided by the
-                  RAP Team.
+                  Social & Environmental Team.
                 </li>
               </div>
             </div>
           ) : (
             <div className="informationDiv" hidden></div>
+            // <div className="informationDiv" hidden></div>
           )}
         </calcite-panel>
       </calcite-shell-panel>
 
-      {nextWidget === "handedover-charts" && nextWidget !== activeWidget && (
-        <HandedOverAreaChart />
-      )}
-
-      {nextWidget === "timeslider" && nextWidget !== activeWidget && (
-        <Timeslider />
-      )}
+      {nextWidget === "timeslider" &&
+        !activeWidget &&
+        nextWidget !== activeWidget && <Timeslider />}
     </>
   );
 }

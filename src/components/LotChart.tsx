@@ -1,46 +1,32 @@
-import { useEffect, useRef, useState } from "react";
+/* eslint-disable @typescript-eslint/no-unused-expressions */
+import { use, useEffect, useRef, useState } from "react";
 import {
   handedOverLotLayer,
   lotLayer,
-  queryc_lot2,
+  publicLotLayer,
   queryc_lot,
-  queryc_lot3,
+  subterraenanLots18_layer,
+  tobeHandedOverLotLayer,
 } from "../layers";
-import * as am5 from "@amcharts/amcharts5";
-import * as am5percent from "@amcharts/amcharts5/percent";
-import am5themes_Animated from "@amcharts/amcharts5/themes/Animated";
-import am5themes_Responsive from "@amcharts/amcharts5/themes/Responsive";
+import { thousands_separators, zoomToLayer } from "../Query";
+import "@esri/calcite-components/components/calcite-checkbox";
+import "@esri/calcite-components/components/calcite-label";
 import {
-  highlightLot,
-  highlightRemove,
-  thousands_separators,
-  zoomToLayer,
-  queryDefinitionExpression,
-  updatedDisplayDates,
-} from "../Query";
-import "@esri/calcite-components/dist/components/calcite-segmented-control";
-import "@esri/calcite-components/dist/components/calcite-segmented-control-item";
-import "@esri/calcite-components/dist/components/calcite-checkbox";
-import {
-  affectedAreaField,
-  lotHandedOverAreaField,
-  lotHandedOverField,
-  lotIdField,
+  default_bkColor,
+  handedOverField,
+  lot_id_field,
   lotStatusField,
   primaryLabelColor,
-  querySuperUrgent,
   statusLotColor,
   statusLotLabel,
   statusLotQuery,
-  superurgent_items,
-  updatedDateCategoryNames,
-  valueLabelColor,
+  tobeHandedOverField,
+  white_bkColor,
 } from "../uniqueValues";
-import "@arcgis/map-components/dist/components/arcgis-scene";
-import "@arcgis/map-components/components/arcgis-scene";
+import { ArcgisMap } from "@arcgis/map-components/dist/components/arcgis-map";
+import { chartRenderer } from "../ChartRenderer";
 import { pieChartStatusData, fieldStatistic } from "../ChartGenerator";
-import { affectedAreaValue, chartRenderer } from "../ChartRenderer";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   timesliderFieldKeys,
   locationKeys,
@@ -54,37 +40,29 @@ import type {
   DisplayDates,
   TimeSliderState,
 } from "../interfaceKeys";
+import { MyContext } from "./MainChart";
+import { queryDefinitionExpression } from "../queryDefinition";
+import {
+  chartSetter,
+  legendSetter,
+  rootSetter,
+  seriesSetter,
+} from "../ChartSetter";
 
-// Dispose function
-function maybeDisposeRoot(divId: any) {
-  am5.array.each(am5.registry.rootElements, function (root) {
-    if (root.dom.id === divId) {
-      root.dispose();
-    }
-  });
-}
-
-//--------------------------------------------//
-//              Chart Component                //
-//--------------------------------------------//
 const LotChart = () => {
-  const queryClient = useQueryClient();
-  const arcgisScene = document.querySelector("arcgis-scene");
-
-  //--- Declare useState
+  const { updateBkColor } = use(MyContext);
+  const arcgisMap = document.querySelector("arcgis-map") as ArcgisMap;
   const [chartPanelwidth, setChartPanelwidth] = useState<any>();
-  const [handedOverCheckBox, setHandedOverCheckBox] = useState<any>(false);
-  const [superurgenttype, setSuperurgenttype] = useState<any>(
-    superurgent_items[0],
-  );
+  const [bkcolorSwitch, setBkcolorSwitch] = useState<boolean>(false);
+  const [labelColor, setLabelColor] = useState<any>(primaryLabelColor);
+
+  //--- Update background color
+  useEffect(() => {
+    updateBkColor(bkcolorSwitch ? white_bkColor : default_bkColor);
+    setLabelColor(bkcolorSwitch ? default_bkColor : primaryLabelColor);
+  }, [bkcolorSwitch]);
 
   //--- 0. As of date
-  //--- Updated dates: asofDate and dayspass
-  queryClient.setQueryData<DisplayDates>(
-    dateDisplayKeys.selected,
-    updatedDisplayDates(updatedDateCategoryNames[0]),
-  );
-
   const { data: newAsOfDate } = useQuery<DisplayDates | any>({
     queryKey: dateDisplayKeys.selected,
     queryFn: async () => ({}),
@@ -97,8 +75,9 @@ const LotChart = () => {
     queryFn: async () => ({}),
     staleTime: Infinity,
   });
-  const municipality = selectedLocation?.municipality;
-  const barangay = selectedLocation?.barangay;
+  const cpackage = selectedLocation?.cpackage;
+  const landType = selectedLocation?.landType;
+  const landSection = selectedLocation?.landSection;
 
   //--- Updated fields for timeslider
   const { data: newStates } = useQuery<TimesliderFieldsTypes | any>({
@@ -107,9 +86,8 @@ const LotChart = () => {
     staleTime: Infinity,
   });
   const status_field = newStates?.statusdateField;
-  const ho_field = newStates?.newHandedOverfield;
-  const hoa_field = newStates?.newHandedoverAreafield;
-  const aa_field = newStates?.newAffectedAreafield;
+  const ho_JVfield = newStates?.newHandedOverJVfield;
+  const ho_NYfield = newStates?.newHandedoverNYfield;
 
   //--- timeslider state
   const { data: time } = useQuery<TimeSliderState | any>({
@@ -121,34 +99,25 @@ const LotChart = () => {
 
   //--- 2. Streamlined Data Fetching with useQuery
   const { data } = useQuery<ChartResponse | any>({
-    queryKey: [
-      municipality,
-      barangay,
-      superurgenttype,
-      status_field,
-      lotStatusField,
-      ho_field,
-      hoa_field,
-      aa_field,
-      timesliderstate, // Add dependecies so when these layers are changed, re-fetching happens.
-    ],
+    queryKey: [cpackage, landType, landSection, status_field, timesliderstate],
     queryFn: async () => {
-      const qSuperrugent_expression =
-        superurgenttype === "OFF" ? undefined : querySuperUrgent;
-
-      queryc_lot.qValues = [municipality, barangay];
-      queryc_lot.q2Expression = qSuperrugent_expression;
-
+      queryc_lot.qValues = [cpackage, landType, landSection];
       queryDefinitionExpression({
         queryExpression: queryc_lot.queryExpression(),
-        featureLayer: [lotLayer, handedOverLotLayer],
+        featureLayer: [
+          lotLayer,
+          handedOverLotLayer,
+          publicLotLayer,
+          tobeHandedOverLotLayer,
+          subterraenanLots18_layer,
+        ],
       });
 
-      //--- Pie chart data
+      //--- chart data
       const chartData = await pieChartStatusData({
         qChart: queryc_lot.queryExpression(),
         layer: lotLayer,
-        statusList: statusLotQuery,
+        statusList: statusLotLabel,
         statusColor: statusLotColor,
         statusField: timesliderstate ? status_field : lotStatusField,
         statisticField: timesliderstate ? status_field : lotStatusField,
@@ -159,171 +128,112 @@ const LotChart = () => {
       const totaln = await fieldStatistic({
         qChart: queryc_lot.queryExpression(),
         layer: lotLayer,
-        statisticField: lotIdField,
+        statisticField: lot_id_field,
         statisticType: "count",
       });
 
-      //-- Total affected area
-      const total_affected_area = await fieldStatistic({
+      //--- Number of handed-over lots (GC to JV)
+      const total_ho = await fieldStatistic({
         qChart: queryc_lot.queryExpression(),
         layer: lotLayer,
-        statisticField: timesliderstate ? aa_field : affectedAreaField,
+        statisticField: timesliderstate ? ho_JVfield : handedOverField,
         statisticType: "sum",
       });
 
-      //--- Total handed-over area
-      const total_ho_area = await fieldStatistic({
+      //--- Number of To-be-handed-over lots (to JV)
+      const total_tobe_ho = await fieldStatistic({
         qChart: queryc_lot.queryExpression(),
         layer: lotLayer,
-        statisticField: timesliderstate ? hoa_field : lotHandedOverAreaField,
+        statisticField: timesliderstate ? ho_NYfield : tobeHandedOverField,
         statisticType: "sum",
       });
 
-      //--- Total handed-over lots
-      queryc_lot2.qValues = [municipality, barangay];
-      queryc_lot2.qExpression = `${lotStatusField} <> 8`;
-      queryc_lot2.q2Expression = qSuperrugent_expression;
+      //--- Public lot number
+      const public_lotn = totaln - chartData[1];
 
-      const total_ho_lot = await fieldStatistic({
-        qChart: queryc_lot2.queryExpression(),
-        layer: lotLayer,
-        statisticField: timesliderstate ? ho_field : lotHandedOverField,
-        statisticType: "sum",
-      });
+      //--- Percent handed over
+      const perc_ho = ((total_ho / totaln) * 100).toFixed(1);
 
-      //--- Affected area for each status
-      queryc_lot3.qValues = [municipality, barangay];
-      queryc_lot3.qExpression = `${status_field} >= 1`;
-      queryc_lot3.q2Expression = qSuperrugent_expression;
+      //--- Percent to-be-handed-over
+      const perc_tob_ho = ((total_tobe_ho / totaln) * 100).toFixed(1);
 
-      const affected_area_pie = await pieChartStatusData({
-        qChart: queryc_lot3.queryExpression(),
-        layer: lotLayer,
-        statusList: statusLotQuery,
-        statusColor: statusLotColor,
-        statusField: timesliderstate ? status_field : lotStatusField,
-        statisticField: timesliderstate ? aa_field : affectedAreaField,
-        statisticType: "sum",
-      });
-
-      //--- Handed-Over percent
-      const handedover_percent = Number(
-        ((total_ho_lot / totaln) * 100).toFixed(0),
-      );
-
-      if (!time?.timesliderstate) {
-        zoomToLayer(lotLayer, arcgisScene);
+      if (!timesliderstate) {
+        zoomToLayer(lotLayer, arcgisMap);
       }
 
       return {
         chartData: chartData[0] || [],
         lotNumber: totaln,
-        totalAffectedArea: total_affected_area,
-        handedOverArea: total_ho_area,
-        handedOverNumber: total_ho_lot,
-        affectedAreaPie: affected_area_pie[0] || [],
-        handedOverPercent: handedover_percent,
+        publicn: public_lotn,
+        total_ho: total_ho,
+        total_tob_ho: total_tobe_ho,
+        perc_ho: perc_ho,
+        perc_tobe_ho: perc_tob_ho,
       };
     },
-    structuralSharing: false,
-    // staleTime: Infinity,
-    // Code below will stop rendering a chart during an initial loading.
-    // This simply means enabling this useQuery when either municipality or barangay is true.
-    // enabled: !!selectedLocation?.municipality || !!selectedLocation?.barangay,
   });
-  //--- Call chart data
   const chartData = data?.chartData || [];
   const lotNumber = data?.lotNumber || 0;
-  const totalAffectedArea = data?.totalAffectedArea || 0;
-  const totalHandedOver = data?.handedOverNumber || 0;
-  const totalHandedOverPercent = data?.handedOverPercent || 0;
-  const totalHandedOverArea = data?.handedOverArea || 0;
-  const affectedAreaStatus = data?.affectedAreaPie || [];
+  const total_handedOver = data?.total_ho || 0;
+  const total_tobe_handedOver = data?.total_tob_ho || 0;
+  const public_lotn = data?.publicn || 0;
+  const perc_handedOver = data?.perc_ho || 0;
+  const perce_tobe_handedOver = data?.perc_tobe_ho || 0;
 
-  //------------------------------------------------------------//
-  //              Pie chart rendering declaration               //
-  //------------------------------------------------------------//
+  // Chart Resize parameters
   const new_fontSize = chartPanelwidth / 22.3;
   const new_valueSize = new_fontSize * 1.55;
-  const new_imageSize = chartPanelwidth * 0.03;
-  const new_sementedListSize = chartPanelwidth * 0.55;
-  const new_asofDateSize = chartPanelwidth * 0.032;
+  const new_imageSize = chartPanelwidth * 0.028;
+  // const new_asofDateSize = chartPanelwidth * 0.032;
   const new_pieSeriesScale = 220;
   const new_pieInnerValueFontSize = "1.1rem";
   const new_pieInnerLabelFontSize = "0.45em";
 
-  const pieSeriesRef = useRef<any>(null);
-  const legendRef = useRef<any>(null);
-  const chartRef = useRef<any>(null);
-
-  // Define chart id
+  // 1. Land Acquisition
+  const pieSeriesRef = useRef<unknown | any | undefined>({});
+  const legendRef = useRef<unknown | any | undefined>({});
+  const chartRef = useRef<unknown | any | undefined>({});
   const chartID = "pie-two";
 
+  // 1. Pie Chart for Land Acquisition
   useEffect(() => {
-    superurgenttype === superurgent_items[1]
-      ? highlightLot(lotLayer, arcgisScene)
-      : highlightRemove();
-  }, [superurgenttype]);
+    // maybeDisposeRoot(chartID);
 
-  useEffect(() => {
-    handedOverLotLayer.visible = handedOverCheckBox;
-  }, [handedOverCheckBox]);
-
-  //---  Pie Chart Renderer
-  useEffect(() => {
-    maybeDisposeRoot(chartID);
-    const root = am5.Root.new(chartID);
-    root.container.children.clear();
-    root._logo?.dispose();
-
-    root.setThemes([
-      am5themes_Animated.new(root),
-      am5themes_Responsive.new(root),
-    ]);
-
-    const chart = root.container.children.push(
-      am5percent.PieChart.new(root, {
-        centerY: am5.percent(25), //-10
-        y: am5.percent(25), // space between pie chart and total lots
-        layout: root.verticalLayout,
-      }),
-    );
+    const root = rootSetter({ chartID: chartID });
+    const chart = chartSetter(root);
     chartRef.current = chart;
 
-    const pieSeries = chart.series.push(
-      am5percent.PieSeries.new(root, {
-        name: "Series",
-        categoryField: "category",
-        valueField: "value",
-        legendLabelText:
-          '{category}[/] ([#C9CC3F; bold]{valuePercentTotal.formatNumber("#.")}%[/]) ',
-        radius: am5.percent(45), // outer radius
-        innerRadius: am5.percent(28),
-      }),
-    );
+    const pieSeries = seriesSetter({
+      chart: chart,
+      root: root,
+      categoryField: "category",
+      valueField: "value",
+      legendValueText: "{valuePercentTotal.formatNumber('#.')}% ({value})",
+      radius: 45,
+      innerRadius: 28,
+      scale: 1.7,
+    });
     pieSeriesRef.current = pieSeries;
     chart.series.push(pieSeries);
 
-    const legend = chart.children.push(
-      am5.Legend.new(root, {
-        centerX: am5.percent(50),
-        x: am5.percent(50),
-        scale: 1.03,
-      }),
-    );
+    // Legend
+    const legend = legendSetter({
+      chart: chart,
+      root: root,
+      centerX: 50,
+      x: 50,
+    });
     legendRef.current = legend;
     legend.data.setAll(pieSeries.dataItems);
 
-    // Render chart
     chartRenderer({
       chart: chart,
       pieSeries: pieSeries,
       legend: legend,
       root: root,
       qChart: queryc_lot,
-      q2Expression: superurgenttype === "OFF" ? undefined : querySuperUrgent,
       status_field: timesliderstate ? status_field : lotStatusField,
-      arcgisScene: arcgisScene,
+      arcgisMap: arcgisMap,
       updateChartPanelwidth: setChartPanelwidth,
       data: chartData,
       pieSeriesScale: new_pieSeriesScale,
@@ -332,14 +242,12 @@ const LotChart = () => {
       pieInnerValueFontSize: new_pieInnerValueFontSize,
       layer: lotLayer,
       statusArray: statusLotQuery,
+      background_color_switch: bkcolorSwitch,
     });
-    affectedAreaValue(legend, affectedAreaStatus, statusLotLabel);
-
-    // Dispose root
     return () => {
       root.dispose();
     };
-  }, [chartID, chartData, affectedAreaStatus]);
+  }, [chartID, chartData, bkcolorSwitch]);
 
   useEffect(() => {
     pieSeriesRef.current?.data.setAll(chartData);
@@ -348,32 +256,26 @@ const LotChart = () => {
 
   return (
     <>
-      <div
-        style={{
-          display: "flex",
-          marginTop: "3px",
-          marginLeft: "15px",
-          marginRight: "15px",
-          justifyContent: "space-between",
-          marginBottom: "5px",
-        }}
-      >
+      <div style={{ display: "flex", justifyContent: "space-between" }}>
         <img
           src="https://EijiGorilla.github.io/Symbols/Land_logo.png"
           alt="Land Logo"
           height={`${new_imageSize}%`}
           width={`${new_imageSize}%`}
-          style={{ paddingTop: "5px", paddingLeft: "5px" }}
+          style={{ marginTop: "15px", marginLeft: "20px" }}
         />
         <dl style={{ alignItems: "center" }}>
           <dt
-            style={{ color: primaryLabelColor, fontSize: `${new_fontSize}px` }}
+            style={{
+              color: labelColor,
+              fontSize: `${new_fontSize}px`,
+            }}
           >
-            Total Lots
+            TOTAL LOTS
           </dt>
           <dd
             style={{
-              color: valueLabelColor,
+              color: labelColor,
               fontSize: `${new_valueSize}px`,
               fontWeight: "bold",
               fontFamily: "calibri",
@@ -384,87 +286,36 @@ const LotChart = () => {
             {thousands_separators(lotNumber)}
           </dd>
         </dl>
-        <dl style={{ alignItems: "center" }}>
+
+        {/* Public Lot Number */}
+        <dl style={{ alignItems: "center", marginRight: "20px" }}>
           <dt
-            style={{ color: primaryLabelColor, fontSize: `${new_fontSize}px` }}
+            style={{
+              color: labelColor,
+              fontSize: `${new_fontSize}px`,
+            }}
           >
-            Total Affected Area
+            PUBLIC LOTS
           </dt>
-          {/* #d3d3d3 */}
           <dd
             style={{
-              color: valueLabelColor,
+              color: labelColor,
               fontSize: `${new_valueSize}px`,
+              fontWeight: "bold",
               fontFamily: "calibri",
               lineHeight: "1.2",
               margin: "auto",
-              fontWeight: "bold",
             }}
           >
-            {totalAffectedArea &&
-              thousands_separators(totalAffectedArea.toFixed(0))}
-            <label
-              style={{ fontWeight: "normal", fontSize: `${new_fontSize}px` }}
-            >
-              {" "}
-              m
-            </label>
-            <label style={{ verticalAlign: "super", fontSize: "0.6rem" }}>
-              2
-            </label>
+            {thousands_separators(public_lotn)}
           </dd>
         </dl>
       </div>
 
-      <div style={{ display: "flex" }}>
-        <div
-          style={{
-            marginLeft: "15px",
-            fontSize: `${new_fontSize}px`,
-            color: primaryLabelColor,
-            marginTop: "auto",
-            marginBottom: "auto",
-            marginRight: "10px",
-          }}
-        >
-          Super Urgent Lot:{" "}
-        </div>
-        <calcite-segmented-control
-          scale="s"
-          width="full"
-          style={{
-            width: `${new_sementedListSize}px`,
-            // marginRight: "80px",
-            // marginTop: "auto",
-            marginBottom: "auto",
-          }}
-          oncalciteSegmentedControlChange={(event: any) =>
-            setSuperurgenttype(event.target.selectedItem.id)
-          }
-        >
-          {superurgenttype &&
-            superurgent_items.map((priority, index) => {
-              return (
-                <calcite-segmented-control-item
-                  {...(superurgenttype === priority ? { checked: true } : {})}
-                  key={index}
-                  value={priority}
-                  id={priority}
-                >
-                  {priority}
-                </calcite-segmented-control-item>
-              );
-            })}
-        </calcite-segmented-control>
-      </div>
-
       <div
         style={{
-          color: newAsOfDate?.daysPass === true ? "red" : "gray",
-          fontSize: `${new_asofDateSize}px`,
           float: "right",
           marginRight: "5px",
-          marginTop: "5px",
         }}
       >
         {!newAsOfDate?.asOfDate ? "" : "As of " + newAsOfDate?.asOfDate}
@@ -475,10 +326,10 @@ const LotChart = () => {
         id={chartID}
         style={{
           width: "100%",
-          height: "57vh",
+          height: "55vh",
           backgroundColor: "rgb(0,0,0,0)",
           color: "white",
-          marginBottom: "1%",
+          marginBottom: "3%",
         }}
       ></div>
 
@@ -486,38 +337,19 @@ const LotChart = () => {
       <div
         style={{
           display: "flex",
-          marginLeft: "15px",
-          marginRight: "15px",
           justifyContent: "space-between",
-          marginBottom: "10px",
+          marginLeft: "20px",
+          marginRight: "20px",
         }}
       >
-        <div
-          style={{
-            backgroundColor: "green",
-            height: "0",
-            marginTop: "13px",
-            marginRight: "-10px",
-          }}
-        >
-          <calcite-checkbox
-            name="handover-checkbox"
-            label="VIEW"
-            scale="l"
-            oncalciteCheckboxChange={() =>
-              setHandedOverCheckBox(handedOverCheckBox === false ? true : false)
-            }
-          ></calcite-checkbox>
-        </div>
-        <dl style={{ alignItems: "center" }}>
-          <dt
-            style={{ color: primaryLabelColor, fontSize: `${new_fontSize}px` }}
-          >
-            Total Handed-Over
+        <dl style={{ justifyContent: "space-between" }}>
+          <dt style={{ color: labelColor, fontSize: `${new_fontSize}px` }}>
+            <div style={{ marginBottom: "5px" }}>Handed Over</div>
+            <div style={{ fontSize: "1.0rem" }}>(GC to JV)</div>
           </dt>
           <dd
             style={{
-              color: valueLabelColor,
+              color: labelColor,
               fontSize: `${new_valueSize}px`,
               fontWeight: "bold",
               fontFamily: "calibri",
@@ -525,39 +357,48 @@ const LotChart = () => {
               margin: "auto",
             }}
           >
-            {totalHandedOverPercent}% ({thousands_separators(totalHandedOver)})
+            {perc_handedOver}% ({thousands_separators(total_handedOver)})
           </dd>
         </dl>
-        <dl style={{ alignItems: "center" }}>
-          <dt
-            style={{ color: primaryLabelColor, fontSize: `${new_fontSize}px` }}
-          >
-            Handed-Over Area
+
+        <dl style={{ justifyContent: "space-between" }}>
+          <dt style={{ color: labelColor, fontSize: `${new_fontSize}px` }}>
+            <div style={{ marginBottom: "5px" }}>To be Handed Over</div>
+            <div style={{ fontSize: "1.0rem" }}>(to JV)</div>
           </dt>
-          {/* #d3d3d3 */}
           <dd
             style={{
-              color: valueLabelColor,
+              color: labelColor,
               fontSize: `${new_valueSize}px`,
+              fontWeight: "bold",
               fontFamily: "calibri",
               lineHeight: "1.2",
               margin: "auto",
-              fontWeight: "bold",
             }}
           >
-            {totalHandedOverArea &&
-              thousands_separators(totalHandedOverArea.toFixed(0))}
-            <label
-              style={{ fontWeight: "normal", fontSize: `${new_fontSize}px` }}
-            >
-              {" "}
-              m
-            </label>
-            <label style={{ verticalAlign: "super", fontSize: "0.6rem" }}>
-              2
-            </label>
+            {perce_tobe_handedOver}% (
+            {thousands_separators(total_tobe_handedOver)})
           </dd>
         </dl>
+      </div>
+      {/* switch white and black background */}
+      <div
+        style={{
+          color: labelColor,
+          fontSize: "12px",
+          display: "flex",
+          justifyContent: "flex-end",
+          marginRight: "10px",
+          marginLeft: "10px",
+        }}
+      >
+        <span style={{ marginRight: "5px" }}>BLK BG</span>
+        <calcite-switch
+          oncalciteSwitchChange={(event: any) =>
+            setBkcolorSwitch(event.target.checked)
+          }
+        ></calcite-switch>{" "}
+        <span style={{ marginLeft: "5px" }}>WHT BG</span>
       </div>
     </>
   );

@@ -1,25 +1,17 @@
-/* eslint-disable @typescript-eslint/no-this-alias */
-/* eslint-disable @typescript-eslint/no-unused-expressions */
-import { useEffect, useRef, useState, memo } from "react";
-import {
-  queryc_struc,
-  queryc_struc2,
-  queryc_struc3,
-  structureLayer,
-} from "../layers";
+import { useRef, useState, useEffect, memo } from "react";
+import { isfLayer, queryc_isf } from "../layers";
 import { thousands_separators } from "../Query";
+import { ArcgisMap } from "@arcgis/map-components/components/arcgis-map";
 import {
-  colorStructureHex,
+  colorIsf,
   primaryLabelColor,
-  statusStructure,
-  statusStructureField,
-  statusStructureQuery,
-  structureRemarksField,
+  statusIsf,
+  statusIsfField,
+  statusIsfQuery,
   valueLabelColor,
 } from "../uniqueValues";
-import { ArcgisMap } from "@arcgis/map-components/components/arcgis-map";
 import { chartRenderer } from "../ChartRenderer";
-import { pieChartStatusData, fieldStatistic } from "../ChartGenerator";
+import { pieChartStatusData } from "../ChartGenerator";
 import { locationKeys } from "../interfaceKeys";
 import type { SelectedLocation, ChartResponse } from "../interfaceKeys";
 import { useQuery } from "@tanstack/react-query";
@@ -28,13 +20,12 @@ import {
   chartSetter,
   legendSetter,
   maybeDisposeRoot,
-  MyTheme,
   rootSetter,
   seriesSetter,
 } from "../ChartSetter";
 
 /// Draw chart
-const StructureChart = memo(() => {
+const IsfChart = memo(() => {
   const arcgisMap = document.querySelector("arcgis-map") as ArcgisMap;
   const [chartPanelwidth, setChartPanelwidth] = useState<any>();
 
@@ -50,86 +41,51 @@ const StructureChart = memo(() => {
 
   //--- 2. Streamlined Data Fetching with useQuery
   const { data } = useQuery<ChartResponse | any>({
-    queryKey: [cpackage, landType, landSection, statusStructureField],
+    queryKey: [cpackage, landType, landSection, statusIsfField],
     queryFn: async () => {
-      const query_qValues = [cpackage, landType, landSection];
-
-      queryc_struc.qValues = query_qValues;
-      queryc_struc.qExpression = `${statusStructureField} >= 1`;
-
+      queryc_isf.qValues = [cpackage, landType, landSection];
       queryDefinitionExpression({
-        queryExpression: queryc_struc.queryExpression(),
-        featureLayer: [structureLayer],
+        queryExpression: queryc_isf.queryExpression(),
+        featureLayer: [isfLayer],
       });
 
-      //--- Pie chart data
       const chartData = await pieChartStatusData({
-        qChart: queryc_struc.queryExpression(),
-        layer: structureLayer,
-        statusList: statusStructure,
-        statusColor: colorStructureHex,
-        statusField: statusStructureField,
-        statisticField: statusStructureField,
+        qChart: queryc_isf.queryExpression(),
+        layer: isfLayer,
+        statusList: statusIsf,
+        statusColor: colorIsf,
+        statusField: statusIsfField,
+        statisticField: statusIsfField,
         statisticType: "count",
       });
-
-      //--- numbe of demolished structures
-      queryc_struc2.qValues = query_qValues;
-      queryc_struc2.qExpression = `${structureRemarksField} = 'Demolished'`;
-      const demolished = await fieldStatistic({
-        qChart: queryc_struc2.queryExpression(),
-        layer: structureLayer,
-        statisticField: structureRemarksField,
-        statisticType: "count",
-      });
-
-      //--- number of structures subject to demolition
-      queryc_struc3.qValues = query_qValues;
-      queryc_struc3.qExpression = `${structureRemarksField} IS NOT NULL`;
-      const tobe_demolish = await fieldStatistic({
-        qChart: queryc_struc3.queryExpression(),
-        layer: structureLayer,
-        statisticField: structureRemarksField,
-        statisticType: "count",
-      });
-
-      //--- percent demolished
-      const perce_demolished = Math.round((demolished_n / tobe_demolish) * 100);
 
       return {
         chartData: chartData[0] || [],
         totalNumber: chartData[1],
-        demolishedn: demolished,
-        percDemolished: perce_demolished,
       };
     },
     structuralSharing: false,
   });
-
-  //--- Call chart data
   const chartData = data?.chartData || [];
   const totaln = data?.totalNumber || 0;
-  const demolished_n = data?.demolishedn;
-  const percDemolish_n = data?.percDemolished;
 
   const new_fontSize = chartPanelwidth / 22.3;
-  const new_valueSize = new_fontSize * 1.55;
+  // const new_valueSize = new_fontSize * 1.55;
   const new_imageSize = chartPanelwidth * 0.03;
   // const new_asofDateSize = chartPanelwidth * 0.032;
   const new_pieSeriesScale = 220;
   const new_pieInnerValueFontSize = "1.2rem";
   const new_pieInnerLabelFontSize = "0.45em";
 
-  // 1. Structure
   const pieSeriesRef = useRef<unknown | any | undefined>({});
   const legendRef = useRef<unknown | any | undefined>({});
   const chartRef = useRef<unknown | any | undefined>({});
-  const chartID = "structure-chart";
+  const chartID = "isf-pie";
 
   useEffect(() => {
     maybeDisposeRoot(chartID);
 
-    const root = rootSetter({ chartID: chartID, mytheme: MyTheme });
+    const root = rootSetter({ chartID: chartID });
     const chart = chartSetter(root);
     chartRef.current = chart;
 
@@ -141,11 +97,12 @@ const StructureChart = memo(() => {
       legendValueText: "{valuePercentTotal.formatNumber('#.')}% ({value})",
       radius: 45,
       innerRadius: 28,
-      scale: 1.7,
+      scale: 1.6,
     });
     pieSeriesRef.current = pieSeries;
     chart.series.push(pieSeries);
 
+    // Legend
     const legend = legendSetter({
       chart: chart,
       root: root,
@@ -157,22 +114,21 @@ const StructureChart = memo(() => {
 
     // Render chart
     chartRenderer({
-      chartItem: "structure",
       chart: chart,
       pieSeries: pieSeries,
       legend: legend,
       root: root,
-      qChart: queryc_struc,
-      status_field: statusStructureField,
+      qChart: queryc_isf,
+      status_field: statusIsfField,
       arcgisMap: arcgisMap,
       updateChartPanelwidth: setChartPanelwidth,
       data: chartData,
       pieSeriesScale: new_pieSeriesScale,
-      pieInnerLabel: "STRUCTURES",
+      pieInnerLabel: "FAMILIES",
       pieInnerLabelFontSize: new_pieInnerLabelFontSize,
       pieInnerValueFontSize: new_pieInnerValueFontSize,
-      layer: structureLayer,
-      statusArray: statusStructureQuery,
+      layer: isfLayer,
+      statusArray: statusIsfQuery,
       background_color_switch: false,
     });
 
@@ -190,22 +146,22 @@ const StructureChart = memo(() => {
     <>
       <div style={{ display: "flex", justifyContent: "space-between" }}>
         <img
-          src="https://EijiGorilla.github.io/Symbols/House_Logo.svg"
+          src="https://EijiGorilla.github.io/Symbols/NLO_Logo.svg"
           alt="Land Logo"
           height={`${new_imageSize}%`}
           width={`${new_imageSize}%`}
-          style={{ marginTop: "10px", marginLeft: "20px" }}
+          style={{ marginTop: "20px", marginLeft: "20px" }}
         />
-        <dl style={{ alignItems: "center", marginRight: "25px" }}>
+        <dl style={{ alignItems: "center", marginRight: "30px" }}>
           <dt
             style={{ color: primaryLabelColor, fontSize: `${new_fontSize}px` }}
           >
-            TOTAL STRUCTURES
+            TOTAL FAMILIES
           </dt>
           <dd
             style={{
               color: valueLabelColor,
-              fontSize: `${new_valueSize}px`,
+              fontSize: "1.9rem",
               fontWeight: "bold",
               fontFamily: "calibri",
               lineHeight: "1.2",
@@ -216,48 +172,18 @@ const StructureChart = memo(() => {
           </dd>
         </dl>
       </div>
-      {/* Structure Chart */}
+
       <div
         id={chartID}
         style={{
+          width: "100%",
           height: "55vh",
           backgroundColor: "rgb(0,0,0,0)",
           color: "white",
-          marginBottom: "7%",
         }}
       ></div>
-
-      {/* Demolished number */}
-      <div style={{ display: "flex", justifyContent: "space-between" }}>
-        <img
-          src="https://EijiGorilla.github.io/Symbols/Structure_Demolished.svg"
-          alt="Land Logo"
-          height={`${new_imageSize}%`}
-          width={"55px"}
-          style={{ marginTop: "10px", marginLeft: "20px" }}
-        />
-        <dl style={{ alignItems: "center", marginRight: "35px" }}>
-          <dt
-            style={{ color: primaryLabelColor, fontSize: `${new_fontSize}px` }}
-          >
-            DEMOLISHED
-          </dt>
-          <dd
-            style={{
-              color: valueLabelColor,
-              fontSize: `${new_valueSize}px`,
-              fontWeight: "bold",
-              fontFamily: "calibri",
-              lineHeight: "1.2",
-              margin: "auto",
-            }}
-          >
-            {percDemolish_n}% ({thousands_separators(demolished_n)})
-          </dd>
-        </dl>
-      </div>
     </>
   );
 }); // End of lotChartgs
 
-export default StructureChart;
+export default IsfChart;

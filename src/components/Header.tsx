@@ -1,6 +1,15 @@
 import DropdownData from "./DropdownContext";
+import { dateDisplayKeys } from "../interfaceKeys";
+import type { DisplayDates } from "../interfaceKeys";
+import { useQuery } from "@tanstack/react-query";
 
 function Header() {
+  const { data: newAsOfDate } = useQuery<DisplayDates | any>({
+    queryKey: dateDisplayKeys.selected,
+    queryFn: async () => ({}),
+    staleTime: Infinity,
+  });
+
   return (
     <>
       <header
@@ -34,22 +43,33 @@ function Header() {
             marginBottom: "auto",
           }}
         >
-          N2 LAND ACQUISITION
+          MMSP LAND
         </b>
+        <div
+          style={{
+            width: "200px",
+            height: "20px",
+            marginTop: "auto",
+            marginLeft: "auto",
+            marginBottom: "3px",
+          }}
+        >
+          {!newAsOfDate?.asOfDate ? "" : "As of " + newAsOfDate?.asOfDate}
+        </div>
 
         {/* Dropdown component */}
         <DropdownData />
 
         <img
-          src="https://EijiGorilla.github.io/Symbols/Projec_Logo/GCR LOGO.png"
+          src="https://EijiGorilla.github.io/Symbols/Projec_Logo/MMSP.png"
           alt="GCR Logo"
           height={"50px"}
           width={"75px"}
           style={{
             marginBottom: "auto",
             marginTop: "auto",
-            marginLeft: "1rem",
-            marginRight: "1.5rem",
+            marginLeft: "auto",
+            marginRight: "1rem",
           }}
         />
       </header>

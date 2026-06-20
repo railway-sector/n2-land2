@@ -1,7 +1,8 @@
 //--- Dropdown
 export interface SelectedLocation {
-  municipality: string | any;
-  barangay: string | any;
+  cpackage: string | any;
+  landType: string | any;
+  landSection: string | any;
 }
 
 export const locationKeys = {
@@ -20,6 +21,7 @@ export const timesliderKeys = {
 //-- date fields
 export interface DateFieldsType {
   dateFields: any;
+  latestasofdate: any;
 }
 
 export const datefieldKeys = {
@@ -29,10 +31,8 @@ export const datefieldKeys = {
 //--- Dates for chart
 export interface TimesliderFieldsTypes {
   statusdateField?: string | any;
-  newHandedoverAreafield?: string | any;
-  newAffectedAreafield?: string | any;
-  newHandedOverfield?: string | any;
-  dateforhandedover?: string | any;
+  newHandedOverJVfield?: string | any;
+  newHandedoverNYfield?: string | any;
 }
 
 export const timesliderFieldKeys = {
@@ -49,17 +49,17 @@ export const dateDisplayKeys = {
   selected: ["displayDates"] as const,
 };
 
-//--- Latest Date
-export interface LatestDateType {
-  latestasofdate: any;
-}
-
-export const latestDateKeys = {
-  selected: ["displayLatestDate"] as const,
-};
-
 //--- Chart
 export interface ChartResponse {
   chartData: any[];
   totalNumber: number | string | undefined;
 }
+
+//--- background color for switch
+export interface BkColorSwitch {
+  bkColor: boolean;
+}
+
+export const bkColorKeys = {
+  selected: ["selectedBkColor"] as const,
+};

@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-unused-expressions */
-/* eslint-disable array-callback-return */
 import { lotLayer, querycExpro } from "../layers";
 import Query from "@arcgis/core/rest/support/Query";
 import "@esri/calcite-components/components/calcite-shell";
@@ -7,43 +6,41 @@ import "@esri/calcite-components/components/calcite-list";
 import "@esri/calcite-components/components/calcite-list-item";
 import "@esri/calcite-components/components/calcite-shell-panel";
 import "@esri/calcite-components/components/calcite-action";
-import "@esri/calcite-components/components/calcite-chip";
-import "@esri/calcite-components/components/calcite-chip-group";
 import "@esri/calcite-components/components/calcite-avatar";
 import "@esri/calcite-components/components/calcite-action-bar";
-import { lotStatusField } from "../uniqueValues";
+import { lotIssueListField } from "../uniqueValues";
 import { ArcgisMap } from "@arcgis/map-components/dist/components/arcgis-map";
-import "../index.css";
 import { useQuery } from "@tanstack/react-query";
 import { locationKeys } from "../interfaceKeys";
 import type { SelectedLocation } from "../interfaceKeys";
 
-//--- Zoom in to selected lot from expropriation list
+// Zoom in to selected lot from expropriation list
 let highlightSelect: any;
 async function resultClickHandler(event: any) {
   const arcgisMap = document.querySelector("arcgis-map") as ArcgisMap;
+
   const queryExtent = new Query({
     objectIds: [event.target.value],
   });
+
   const result = await lotLayer.queryExtent(queryExtent);
   result.extent &&
     arcgisMap?.goTo({
       target: result.extent,
-      // speedFactor: 2,
       zoom: 17,
     });
 
   const layerView = await arcgisMap?.whenLayerView(lotLayer);
   highlightSelect && highlightSelect.remove();
   highlightSelect = layerView.highlight([event.target.value]);
+
   arcgisMap?.view.on("click", () => {
     layerView.filter = null;
     highlightSelect.remove();
   });
 }
 
-//--- List component
-const ExpropriationList = () => {
+const LotIssueList = () => {
   //--- 1. Location state
   const { data: selectedLocation } = useQuery<SelectedLocation | any>({
     queryKey: locationKeys.selected,
@@ -59,7 +56,7 @@ const ExpropriationList = () => {
     const query = lotLayer.createQuery();
 
     querycExpro.qValues = [cpackage, landtype, landsection];
-    querycExpro.qExpression = `${lotStatusField} = 5`;
+    querycExpro.qExpression = `${lotIssueListField} IS NOT NULL`;
     query.where = querycExpro.queryExpression();
     query.outFields = ["*"];
     query.returnGeometry = true;
@@ -69,7 +66,7 @@ const ExpropriationList = () => {
 
   //--- Obtain queried Features
   const { data } = useQuery<any>({
-    queryKey: [cpackage, landtype, landsection, lotStatusField],
+    queryKey: [cpackage, landtype, landsection, lotIssueListField],
     queryFn: () => queryFeatures(),
     select: (response) => {
       return response.features;
@@ -84,7 +81,7 @@ const ExpropriationList = () => {
           lotid: attributes.Id,
           cp: attributes.Package,
           landtype: attributes.Type,
-          landowner: attributes.OWNER,
+          issue: attributes.Issue,
           landsection: attributes.Station1,
           objectid: attributes.OBJECTID,
         };
@@ -93,12 +90,7 @@ const ExpropriationList = () => {
 
   return (
     <>
-      <calcite-list
-        id="result-list"
-        label="exproListLabel"
-        displayMode="nested"
-        // style={{ width: chart_width }}
-      >
+      <calcite-list id="result-list" label="exproListLabel">
         {exproItem && // Extract unique objects from the array
           exproItem
             .filter(
@@ -113,9 +105,8 @@ const ExpropriationList = () => {
                 // need 'key' to upper div and inside CalciteListItem
                 <calcite-list-item
                   key={result.id}
-                  expanded
                   label={result.lotid}
-                  description={result.landowner}
+                  description={result.issue}
                   value={result.objectid}
                   selected={undefined}
                   oncalciteListItemSelect={(event: any) =>
@@ -154,4 +145,4 @@ const ExpropriationList = () => {
   );
 };
 
-export default ExpropriationList;
+export default LotIssueList;
