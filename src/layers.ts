@@ -32,6 +32,38 @@ import {
   station1Field,
 } from "./uniqueValues";
 import QueryExpressionLayers from "query-layers-expression";
+import ChartStackColumns from "chart-stack-column";
+
+export const chartstack = new ChartStackColumns(
+  undefined,
+  undefined,
+  undefined,
+  undefined,
+  undefined,
+  undefined,
+);
+
+export const utilityPointLayer = new FeatureLayer({
+  portalItem: {
+    id: "7507e625f480470a9af257d60cf67c1c",
+    portal: {
+      url: "https://gis.railway-sector.com/portal",
+    },
+  },
+  layerId: 1,
+  title: "Point Symbol",
+});
+
+export const utilityLineLayer = new FeatureLayer({
+  portalItem: {
+    id: "7507e625f480470a9af257d60cf67c1c",
+    portal: {
+      url: "https://gis.railway-sector.com/portal",
+    },
+  },
+  layerId: 2,
+  title: "Line Symbol ", // Relocation PLan?
+});
 
 export const queryc_lot = new QueryExpressionLayers(
   [undefined, undefined],

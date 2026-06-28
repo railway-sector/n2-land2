@@ -6,14 +6,14 @@ import "@esri/calcite-components/components/calcite-switch";
 import "@esri/calcite-components/components/calcite-panel";
 import "@esri/calcite-components/components/calcite-shell-panel";
 import { useState } from "react";
-import LotChart from "./LotChart";
 import "../index.css";
 import { primaryLabelColor } from "../uniqueValues";
-import StructureChart from "./StructureChart";
-import IsfChart from "./IsfChart";
-import ExpropriationList from "./ExpropriationList";
-import LotIssueList from "./LotIssueList";
+import ChartStructure from "./ChartStructure";
+import ChartIsf from "./ChartIsf";
+import ListExpropriation from "./ListExpropriation";
+import ListIssueLot from "./ListIssueLot";
 import { createContext } from "react";
+import ChartLot from "./ChartLot";
 
 type bkColorSwitchType = {
   bkColor: any;
@@ -29,7 +29,7 @@ export const MyContext = createContext<bkColorSwitchType>({
   ...initialState,
 });
 
-function MainChart() {
+function ChartMain() {
   const [panelWidth, setPanelWidth] = useState<string>("40%");
   const [panelHeader, setPanelHeader] = useState<string>("Chart");
   const [bkColor, setBkColor] = useState<any>("#2b2b2b");
@@ -101,28 +101,28 @@ function MainChart() {
             }}
           >
             <MyContext value={{ bkColor, updateBkColor }}>
-              <LotChart />
+              <ChartLot />
             </MyContext>
           </calcite-tab>
 
           {/* CalciteTab: Structure */}
           <calcite-tab>
-            <StructureChart />
+            <ChartStructure />
           </calcite-tab>
 
           {/* CalciteTab: Non-Land Owner */}
           <calcite-tab>
-            <IsfChart />
+            <ChartIsf />
           </calcite-tab>
 
           {/* CalciteTab: List of Lodts under Expropriation */}
           <calcite-tab>
-            <ExpropriationList />
+            <ListExpropriation />
           </calcite-tab>
 
           {/* CalciteTab: List of Lot issues */}
           <calcite-tab>
-            <LotIssueList />
+            <ListIssueLot />
           </calcite-tab>
         </calcite-tabs>
       </calcite-panel>
@@ -130,4 +130,4 @@ function MainChart() {
   );
 }
 
-export default MainChart;
+export default ChartMain;

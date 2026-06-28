@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, memo } from "react";
 import { isfLayer, queryc_isf } from "../layers";
-import { thousands_separators } from "../Query";
+import { thousands_separators } from "../query";
 import { ArcgisMap } from "@arcgis/map-components/components/arcgis-map";
 import {
   colorIsf,
@@ -10,8 +10,8 @@ import {
   statusIsfQuery,
   valueLabelColor,
 } from "../uniqueValues";
-import { chartRenderer } from "../ChartRenderer";
-import { pieChartStatusData } from "../ChartGenerator";
+import { chartRenderer } from "../chartRenderer";
+import { pieChartStatusData } from "../chartGenerator";
 import { locationKeys } from "../interfaceKeys";
 import type { SelectedLocation, ChartResponse } from "../interfaceKeys";
 import { useQuery } from "@tanstack/react-query";
@@ -22,10 +22,10 @@ import {
   maybeDisposeRoot,
   rootSetter,
   seriesSetter,
-} from "../ChartSetter";
+} from "../chartSetter";
 
 /// Draw chart
-const IsfChart = memo(() => {
+const ChartIsf = memo(() => {
   const arcgisMap = document.querySelector("arcgis-map") as ArcgisMap;
   const [chartPanelwidth, setChartPanelwidth] = useState<any>();
 
@@ -186,4 +186,4 @@ const IsfChart = memo(() => {
   );
 }); // End of lotChartgs
 
-export default IsfChart;
+export default ChartIsf;

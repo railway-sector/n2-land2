@@ -40,7 +40,7 @@ async function resultClickHandler(event: any) {
   });
 }
 
-const LotIssueList = () => {
+const ListIssueLot = () => {
   //--- 1. Location state
   const { data: selectedLocation } = useQuery<SelectedLocation | any>({
     queryKey: locationKeys.selected,
@@ -145,4 +145,4 @@ const LotIssueList = () => {
   );
 };
 
-export default LotIssueList;
+export default ListIssueLot;

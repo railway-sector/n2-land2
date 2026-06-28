@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import MapDisplay from "./components/MapDisplay";
 import ActionPanel from "./components/ActionPanel";
 import Header from "./components/Header";
-import MainChart from "./components/MainChart";
+import ChartMain from "./components/ChartMain";
 
 //--- Create a client
 const queryClient = new QueryClient();
@@ -53,7 +53,7 @@ export function App(): React.JSX.Element {
           }}
         >
           <QueryClientProvider client={queryClient}>
-            <MainChart />
+            <ChartMain />
             <ActionPanel />
             <MapDisplay />
             <Header />

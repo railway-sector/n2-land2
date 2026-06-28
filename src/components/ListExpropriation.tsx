@@ -43,7 +43,7 @@ async function resultClickHandler(event: any) {
 }
 
 //--- List component
-const ExpropriationList = () => {
+const ListExpropriation = () => {
   //--- 1. Location state
   const { data: selectedLocation } = useQuery<SelectedLocation | any>({
     queryKey: locationKeys.selected,
@@ -154,4 +154,4 @@ const ExpropriationList = () => {
   );
 };
 
-export default ExpropriationList;
+export default ListExpropriation;

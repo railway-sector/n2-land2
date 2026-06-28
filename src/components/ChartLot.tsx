@@ -1,14 +1,17 @@
 /* eslint-disable @typescript-eslint/no-unused-expressions */
 import { use, useEffect, useRef, useState } from "react";
 import {
+  chartstack,
   handedOverLotLayer,
   lotLayer,
   publicLotLayer,
   queryc_lot,
   subterraenanLots18_layer,
   tobeHandedOverLotLayer,
+  utilityLineLayer,
+  utilityPointLayer,
 } from "../layers";
-import { thousands_separators, zoomToLayer } from "../Query";
+import { thousands_separators, zoomToLayer } from "../query";
 import "@esri/calcite-components/components/calcite-checkbox";
 import "@esri/calcite-components/components/calcite-label";
 import {
@@ -21,11 +24,12 @@ import {
   statusLotLabel,
   statusLotQuery,
   tobeHandedOverField,
+  utility_category_types,
   white_bkColor,
 } from "../uniqueValues";
 import { ArcgisMap } from "@arcgis/map-components/dist/components/arcgis-map";
-import { chartRenderer } from "../ChartRenderer";
-import { pieChartStatusData, fieldStatistic } from "../ChartGenerator";
+import { chartRenderer } from "../chartRenderer";
+import { pieChartStatusData, fieldStatistic } from "../chartGenerator";
 import { useQuery } from "@tanstack/react-query";
 import {
   timesliderFieldKeys,
@@ -40,16 +44,16 @@ import type {
   DisplayDates,
   TimeSliderState,
 } from "../interfaceKeys";
-import { MyContext } from "./MainChart";
+import { MyContext } from "./ChartMain";
 import { queryDefinitionExpression } from "../queryDefinition";
 import {
   chartSetter,
   legendSetter,
   rootSetter,
   seriesSetter,
-} from "../ChartSetter";
+} from "../chartSetter";
 
-const LotChart = () => {
+const ChartLot = () => {
   const { updateBkColor } = use(MyContext);
   const arcgisMap = document.querySelector("arcgis-map") as ArcgisMap;
   const [chartPanelwidth, setChartPanelwidth] = useState<any>();
@@ -113,6 +117,15 @@ const LotChart = () => {
         ],
       });
 
+      //---- test
+      chartstack.categoryTypes = utility_category_types;
+      chartstack.categoryTypeField = "UtilType";
+      chartstack.layers = [utilityPointLayer, utilityLineLayer];
+      chartstack.statusState = [0, 2, 3, 1];
+      chartstack.statusField = "Status";
+      console.log(await chartstack.chartDataStackColumns());
+
+      //--- test
       //--- chart data
       const chartData = await pieChartStatusData({
         qChart: queryc_lot.queryExpression(),
@@ -404,4 +417,4 @@ const LotChart = () => {
   );
 }; // End of lotChartgs
 
-export default LotChart;
+export default ChartLot;

@@ -7,7 +7,7 @@ import {
   queryc_struc3,
   structureLayer,
 } from "../layers";
-import { thousands_separators } from "../Query";
+import { thousands_separators } from "../query";
 import {
   colorStructureHex,
   primaryLabelColor,
@@ -18,8 +18,8 @@ import {
   valueLabelColor,
 } from "../uniqueValues";
 import { ArcgisMap } from "@arcgis/map-components/components/arcgis-map";
-import { chartRenderer } from "../ChartRenderer";
-import { pieChartStatusData, fieldStatistic } from "../ChartGenerator";
+import { chartRenderer } from "../chartRenderer";
+import { pieChartStatusData, fieldStatistic } from "../chartGenerator";
 import { locationKeys } from "../interfaceKeys";
 import type { SelectedLocation, ChartResponse } from "../interfaceKeys";
 import { useQuery } from "@tanstack/react-query";
@@ -31,10 +31,10 @@ import {
   MyTheme,
   rootSetter,
   seriesSetter,
-} from "../ChartSetter";
+} from "../chartSetter";
 
 /// Draw chart
-const StructureChart = memo(() => {
+const ChartStructure = memo(() => {
   const arcgisMap = document.querySelector("arcgis-map") as ArcgisMap;
   const [chartPanelwidth, setChartPanelwidth] = useState<any>();
 
@@ -260,4 +260,4 @@ const StructureChart = memo(() => {
   );
 }); // End of lotChartgs
 
-export default StructureChart;
+export default ChartStructure;

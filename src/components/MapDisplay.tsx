@@ -21,6 +21,8 @@ import {
   stationLayer,
   structureLayer,
   structuresGroupLayer,
+  utilityLineLayer,
+  utilityPointLayer,
 } from "../layers";
 import type { ArcgisSearch } from "@arcgis/map-components/components/arcgis-search";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -29,7 +31,7 @@ import {
   datefieldKeys,
   dateDisplayKeys,
 } from "../interfaceKeys";
-import { dateUpdate } from "../Query";
+import { dateUpdate } from "../query";
 import type {
   TimesliderFieldsTypes,
   DateFieldsType,
@@ -97,6 +99,8 @@ export default function MapDisplay() {
     arcgisMap?.map?.add(stationLayer);
     arcgisMap?.map?.add(alignmentLine);
     arcgisMap?.map?.add(accessRoadOptionsGroupLayer);
+    arcgisMap?.map?.add(utilityLineLayer);
+    arcgisMap?.map?.add(utilityPointLayer);
 
     // Search components
     const sources: any = [
